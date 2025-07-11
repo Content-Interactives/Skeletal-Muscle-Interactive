@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skeletal Muscle System Interactive</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background: #fff;
+    }
+    .svg-container {
+      position: relative;
+      width: 500px;
+      height: 700px;
+      margin: 30px auto;
+      background: #f8f8f8;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px #0001;
+      overflow: hidden;
+    }
+    .main-svg {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 465px;
+      height: 585px;
+      transform: translate(-50%, -50%);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.85;
+    }
+    .overlay-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .dot {
+      cursor: pointer;
+      pointer-events: all;
+      fill: #00813a;
+      stroke: #fff;
+      stroke-width: 3;
+      opacity: 0.85;
+      transition: r 0.2s, fill 0.2s;
+    }
+    .dot:hover {
+      fill: #ff9800;
+      r: 18;
+    }
+    .outline-group {
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align:center;">Skeletal Muscle System</h1>
+  <div style="text-align:center; margin-bottom: 10px; font-size: 1.1rem; color: #333;">Click each dot to learn more about the muscle.</div>
+  <div class="svg-container" id="svgContainer">
+    <img src="Muscle system.svg" class="main-svg" id="mainSvg" alt="Muscle System"/>
+    <svg class="overlay-svg" id="overlaySvg" viewBox="0 0 1000 1400">
+      <defs>
+        <filter id="yellow-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="blue" flood-opacity="1"/>
+        </filter>
+      </defs>
+    </svg>
+  </div>
+  <script>
+    // Centering offsets
+    const offset_x = 116.55;
+    const offset_y = -149.65;
+    // Dot and outline positions from user table (shifted to center)
+    const muscles = [
+      { name: 'Fibularis Longus', outline: 'Fibularis Longus outline.svg', dot: {x: 432+offset_x, y: 1175+offset_y}, outlineBox: {x: 282.11+offset_x, y: 1135+offset_y} },
+      { name: 'Tibialis Anterior', outline: 'Tibialis Anterior outline.svg', dot: {x: 328+offset_x, y: 1234+offset_y}, outlineBox: {x: 299.5+offset_x, y: 1135.97+offset_y} },
+      { name: 'Vastus Lateralis', outline: 'Vastus Lateralis outline.svg', dot: {x: 289+offset_x, y: 1000+offset_y}, outlineBox: {x: 270.72+offset_x, y: 925.24+offset_y} },
+      { name: 'Trapezius', outline: 'Trapezius outline.svg', dot: {x: 279+offset_x, y: 484+offset_y}, outlineBox: {x: 289.5+offset_x, y: 457+offset_y} },
+      { name: 'Sternocleidomastoid', outline: 'Sternocleidomastoid outline.svg', dot: {x: 353+offset_x, y: 452+offset_y}, outlineBox: {x: 334+offset_x, y: 427.5+offset_y} },
+      { name: 'Rectus Femoris', outline: 'Rectus Femoris outline.svg', dot: {x: 432+offset_x, y: 907+offset_y}, outlineBox: {x: 284.31+offset_x, y: 845.9+offset_y} },
+      { name: 'Pectoralis Major', outline: 'Pectoralis Major outline.svg', dot: {x: 434+offset_x, y: 529+offset_y}, outlineBox: {x: 250.5+offset_x, y: 497.91+offset_y} },
+      { name: 'Biceps Branchii', outline: 'Biceps branchii outline.svg', dot: {x: 502+offset_x, y: 579+offset_y}, outlineBox: {x: 212+offset_x, y: 574+offset_y} },
+      { name: 'Brachioradialis', outline: 'Brachioradialis outline.svg', dot: {x: 177+offset_x, y: 697+offset_y}, outlineBox: {x: 140.5+offset_x, y: 650+offset_y} },
+      { name: 'Rectus Abdominis', outline: 'Rectus Abdominis outline.svg', dot: {x: 404+offset_x, y: 697+offset_y}, outlineBox: {x: 330.11+offset_x, y: 635.88+offset_y} },
+      { name: 'External Oblique', outline: 'External Oblique outline.svg', dot: {x: 283+offset_x, y: 602+offset_y}, outlineBox: {x: 268+offset_x, y: 604.98+offset_y} },
+    ];
+
+    const overlaySvg = document.getElementById('overlaySvg');
+    let currentOutline = null;
+    let currentLabel = null;
+
+    function clearOutline() {
+      if (currentOutline) {
+        currentOutline.remove();
+        currentOutline = null;
+      }
+      if (currentLabel) {
+        currentLabel.remove();
+        currentLabel = null;
+      }
+    }
+
+    // Draw dots
+    const dotElements = [];
+    muscles.forEach((muscle, i) => {
+      const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      dot.setAttribute('cx', muscle.dot.x);
+      dot.setAttribute('cy', muscle.dot.y);
+      dot.setAttribute('r', 10);
+      dot.setAttribute('class', 'dot');
+      dot.setAttribute('tabindex', 0);
+      dot.setAttribute('aria-label', muscle.name);
+      dot.addEventListener('click', e => {
+        showOutline(muscle);
+        e.stopPropagation();
+      });
+      dot.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          showOutline(muscle);
+        }
+      });
+      overlaySvg.appendChild(dot);
+      dotElements.push(dot);
+    });
+
+    // Always bring dots to front after showing outline
+    function bringDotsToFront() {
+      dotElements.forEach(dot => overlaySvg.appendChild(dot));
+    }
+
+    function showOutline(muscle) {
+      clearOutline();
+      fetch(muscle.outline)
+        .then(r => r.text())
+        .then(svgText => {
+          const temp = document.createElement('div');
+          temp.innerHTML = svgText;
+          let outlineElem = temp.querySelector('g') || temp.querySelector('path');
+          if (!outlineElem) return;
+          // Remove fill from all paths in the outline and set stroke width and color
+          const paths = outlineElem.querySelectorAll ? outlineElem.querySelectorAll('path') : [];
+          if (outlineElem.tagName === 'path') {
+            outlineElem.setAttribute('fill', 'none');
+            outlineElem.setAttribute('stroke', 'black');
+            outlineElem.setAttribute('stroke-width', '4');
+          }
+          paths.forEach(p => {
+            p.setAttribute('fill', 'none');
+            p.setAttribute('stroke', 'black');
+            p.setAttribute('stroke-width', '4');
+          });
+          // Only translate, no scaling
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('class', 'outline-group');
+          g.setAttribute('transform', `translate(${muscle.outlineBox.x},${muscle.outlineBox.y})`);
+          g.setAttribute('filter', 'url(#yellow-glow)');
+          g.appendChild(outlineElem.cloneNode(true));
+          overlaySvg.appendChild(g);
+          currentOutline = g;
+
+          // Add HTML label
+          const container = document.getElementById('svgContainer');
+          const labelDiv = document.createElement('div');
+          labelDiv.textContent = muscle.name;
+          labelDiv.style.position = 'absolute';
+          labelDiv.style.background = '#fff';
+          labelDiv.style.border = '2px solid #e0e6ef';
+          labelDiv.style.borderRadius = '10px';
+          labelDiv.style.padding = '3px 10px';
+          labelDiv.style.fontWeight = 'bold';
+          labelDiv.style.fontSize = '1rem';
+          labelDiv.style.color = '#222';
+          labelDiv.style.boxShadow = '0 1px 6px #0001';
+          labelDiv.style.pointerEvents = 'none';
+          labelDiv.style.textAlign = 'center';
+          // Convert SVG dot coordinates to container pixel coordinates
+          const svgRect = overlaySvg.getBoundingClientRect();
+          const containerRect = container.getBoundingClientRect();
+          const svgW = overlaySvg.viewBox.baseVal.width;
+          const svgH = overlaySvg.viewBox.baseVal.height;
+          const scaleX = container.offsetWidth / svgW;
+          const scaleY = container.offsetHeight / svgH;
+          const dotX = muscle.dot.x * scaleX;
+          const dotY = muscle.dot.y * scaleY;
+          // Default: right side
+          let left = dotX + 24;
+          let top = dotY - 32;
+          // If dot is on the left half, put label on the left
+          if (dotX < container.offsetWidth / 2) {
+            setTimeout(() => {
+              const labelRect = labelDiv.getBoundingClientRect();
+              left = dotX - labelRect.width - 24;
+              if (left < 0) left = 8;
+              labelDiv.style.left = left + 'px';
+              labelDiv.style.top = top + 'px';
+            }, 0);
+          } else {
+            setTimeout(() => {
+              const labelRect = labelDiv.getBoundingClientRect();
+              if (left + labelRect.width > container.offsetWidth - 10) {
+                left = dotX - labelRect.width - 24;
+              }
+              if (left < 0) left = 8;
+              labelDiv.style.left = left + 'px';
+              labelDiv.style.top = top + 'px';
+            }, 0);
+          }
+          container.appendChild(labelDiv);
+          currentLabel = labelDiv;
+
+          bringDotsToFront();
+        });
+    }
+
+    // Hide outline when clicking outside
+    document.body.addEventListener('click', clearOutline);
+    document.getElementById('svgContainer').addEventListener('click', e => e.stopPropagation());
+  </script>
+</body>
+</html>
